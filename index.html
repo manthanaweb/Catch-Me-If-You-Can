@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%B5%3C/text%3E%3C/svg%3E">
+<title>Catch Me If You Can: จับฉันให้ได้ถ้าคุณกระป๋อง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#inspector" aria-label="Catch Me If You Can หน้าแรก">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="9" stroke="var(--green)" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" stroke="var(--green)" stroke-width="1.8"/><path d="M20 20l6 6" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round"/><path d="M11.5 15.5c.6-2.5 4.4-2.6 5.2-.2M12.4 17.6c1.1 1 2.9 1 4 0" stroke="var(--orange)" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span><b>Catch Me If You Can</b><small>จับฉันให้ได้ถ้าคุณกระป๋อง</small></span>
+    </a>
+    <nav class="tabs" aria-label="เมนูหลัก">
+      <a href="#inspector" data-nav="inspector"><svg class="ico"><use href="#i-search"/></svg>ตรวจสอบ</a>
+      <a href="#locker" data-nav="locker"><svg class="ico"><use href="#i-vault"/></svg>ตู้เก็บหลักฐาน</a>
+      <a href="#board" data-nav="board"><svg class="ico"><use href="#i-board"/></svg>กระดานเตือนภัย</a>
+      <a href="#academy" data-nav="academy"><svg class="ico"><use href="#i-badge"/></svg>ฝึกสืบ</a>
+      <a href="#stats" data-nav="stats"><svg class="ico"><use href="#i-chart"/></svg>สถิติ</a>
+    </nav>
+    <button class="rankchip" id="rankBtn" type="button" aria-label="เปิดแฟ้มประวัตินักสืบ"></button>
+    <button class="theme" id="themeBtn" type="button" aria-label="สลับโหมดสีมืด/สว่าง"><svg class="ico"><use href="#i-theme"/></svg></button>
+  </div>
+</header>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></symbol>
+    <symbol id="i-vault" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-1M12 16v1M9 12H8M16 12h1"/></symbol>
+    <symbol id="i-board" viewBox="0 0 24 24"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></symbol>
+    <symbol id="i-bad" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="i-audio" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+    <symbol id="i-badge" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><circle cx="11" cy="11" r="2.6"/><path d="M13 13l2.6 2.6"/></symbol>
+  </defs>
+</svg>
+
+<main>
+<div class="wrap">
+
+<!-- ===== Inspector ===== -->
+<section id="view-inspector" aria-labelledby="h-inspector">
+  <div class="hero">
+    <h1 id="h-inspector">ตรวจก่อนกด ตรวจก่อนโอน</h1>
+    <p class="lead">วางลิงก์ ข้อความ SMS เบอร์โทร หรือเลขบัญชีที่น่าสงสัย ระบบจะไล่ดูร่องรอยให้เหมือนนักสืบ แล้วบอกว่าควรไว้ใจแค่ไหน</p>
+  </div>
+  <div class="grid2">
+    <div class="stack">
+      <div class="card">
+        <label class="lb" for="q">สิ่งที่อยากตรวจ</label>
+        <textarea id="q" class="field" placeholder="วางลิงก์ ข้อความ เบอร์โทร หรือเลขบัญชีที่นี่" maxlength="3000"></textarea>
+        <div class="row" style="margin-top:12px">
+          <button class="btn pri" id="scanBtn" type="button"><svg class="ico"><use href="#i-search"/></svg>ตรวจสอบ</button>
+          <button class="btn" id="clearBtn" type="button">ล้าง</button>
+        </div>
+        <div style="margin-top:16px">
+          <p class="note" style="margin-bottom:8px">ความเข้มงวดในการตัดสิน</p>
+          <div class="row" id="modeChips" role="group" aria-label="ความเข้มงวดในการตัดสิน"></div>
+          <p class="note" id="modeNote" style="margin-top:8px"></p>
+        </div>
+        <div style="margin-top:16px">
+          <p class="note" style="margin-bottom:8px">ลองตัวอย่าง</p>
+          <div class="samples" id="samples"></div>
+        </div>
+      </div>
+      <div class="banner"><svg class="ico"><use href="#i-info"/></svg><span>ผลนี้มาจากการตรวจเบื้องต้นในเบราว์เซอร์ (รูปแบบลิงก์ ชื่อโดเมน ถ้อยคำที่พบบ่อยในกลโกง และเคสบนกระดานเตือนภัย) ไม่ได้ต่อกับฐานข้อมูลบัญชีม้าหรือเว็บอันตรายของหน่วยงานรัฐ จึงไม่ใช่การรับรองว่าปลอดภัย</span></div>
+      <details class="card brands" id="brandDet">
+        <summary>แบรนด์และโดเมนทางการที่ใช้เทียบ <span class="note" id="brandCount"></span></summary>
+        <div id="brandList" class="stack" style="margin-top:14px"></div>
+        <p class="note" style="margin-top:12px">รายชื่อนี้คัดจากแหล่งข้อมูลสาธารณะและความรู้ทั่วไป อาจไม่ครบหรือล้าสมัย โดเมนที่ไม่อยู่ในรายชื่อไม่ได้แปลว่าปลอม และโดเมนที่อยู่ในรายชื่อก็ยังควรพิมพ์เข้าเว็บด้วยตัวเอง แพลตฟอร์มอย่าง Facebook, LINE และ Google เปิดให้ผู้ใช้สร้างเพจหรือฟอร์มเองได้ ระบบจึงไม่ให้สีเขียวกับลิงก์เหล่านี้ทันที</p>
+      </details>
+      <div class="card" id="histCard" hidden>
+        <div class="row" style="margin-bottom:10px"><h3>แฟ้มคดีของฉัน</h3><span class="sp"></span><button class="btn sm" id="histClear" type="button">ล้างประวัติ</button></div>
+        <ul class="hist" id="hist"></ul>
+      </div>
+    </div>
+    <div id="result" aria-live="polite">
+      <div class="empty"><svg class="ico"><use href="#i-search"/></svg><h3>ผลการตรวจจะอยู่ตรงนี้</h3><p>เขียว ปลอดภัยเบื้องต้น เหลือง น่าสงสัย แดง อันตราย พร้อมเหตุผลทุกข้อ</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Locker ===== -->
+<section id="view-locker" aria-labelledby="h-locker" hidden>
+  <div class="pagehead">
+    <h1 id="h-locker">ตู้เก็บหลักฐานดิจิทัล</h1>
+    <p class="lead">เก็บสลิปโอนเงิน แคปหน้าจอแชท และไฟล์เสียง พร้อมลายนิ้วมือไฟล์ (SHA-256) และ metadata ไฟล์ทุกชิ้นถูกเข้ารหัสในเบราว์เซอร์นี้ ไม่ถูกอัปโหลดไปไหน</p>
+  </div>
+  <div id="lockerBody"></div>
+</section>
+
+<!-- ===== Board ===== -->
+<section id="view-board" aria-labelledby="h-board" hidden>
+  <div class="pagehead row">
+    <div><h1 id="h-board">กระดานเตือนภัยมิจฉาชีพ</h1>
+    <p class="lead">เคสที่ผู้ใช้ช่วยกันรายงาน กดยืนยันถ้าเจอเหมือนกัน หรือเพิ่มเบาะแสที่คุณมี</p></div>
+    <span class="sp"></span>
+    <button class="btn pri" id="newReport" type="button">แจ้งเบาะแสใหม่</button>
+  </div>
+  <div id="boardStatus" style="margin-bottom:16px"></div>
+  <div class="filters">
+    <div class="row" id="catChips" role="group" aria-label="กรองตามประเภทภัย"></div>
+    <div class="row">
+      <input class="field" id="bSearch" type="search" placeholder="ค้นหาจากข้อความ ลิงก์ เบอร์ หรือเลขบัญชี" style="flex:1;min-width:220px;width:auto" aria-label="ค้นหาเคส">
+      <select class="field" id="bArea" style="width:auto;min-width:180px" aria-label="กรองตามพื้นที่"></select>
+      <label class="chip" style="cursor:pointer"><input type="checkbox" id="bSamples" checked style="accent-color:var(--green)"> แสดงเคสตัวอย่าง</label>
+    </div>
+  </div>
+  <div class="feed" id="feed"></div>
+  <dialog id="reportDlg" aria-labelledby="rdTitle">
+    <form method="dialog" id="reportForm" class="stack" novalidate>
+      <h2 id="rdTitle">แจ้งเบาะแสใหม่</h2>
+      <div class="banner warn"><svg class="ico"><use href="#i-warn"/></svg><span>ห้ามใส่ชื่อ เลขบัตรประชาชน หรือข้อมูลส่วนตัวของคุณ เคสที่โพสต์จะมองเห็นได้โดยผู้ที่เปิดหน้านี้</span></div>
+      <div class="formgrid">
+        <div><label class="lb" for="rCat">ประเภทภัย</label><select class="field" id="rCat"></select></div>
+        <div><label class="lb" for="rArea">พื้นที่</label><select class="field" id="rArea"></select></div>
+        <div class="full"><label class="lb" for="rTitle">หัวข้อสั้นๆ</label><input class="field" id="rTitle" maxlength="90" placeholder="เช่น โทรอ้างเป็นเจ้าหน้าที่ศุลกากร"></div>
+        <div class="full"><label class="lb" for="rDetail">เกิดอะไรขึ้น</label><textarea class="field" id="rDetail" maxlength="700" placeholder="เล่าขั้นตอนที่มิจฉาชีพใช้ ข้อความที่ได้รับ และสิ่งที่ขอให้ทำ"></textarea></div>
+        <div class="full"><label class="lb" for="rIdent">ลิงก์ เบอร์โทร เลขบัญชี หรือชื่อเพจ (ไม่บังคับ)</label><input class="field" id="rIdent" maxlength="200" placeholder="คั่นหลายรายการด้วยเว้นวรรคหรือจุลภาค"></div>
+      </div>
+      <p class="note" id="rErr" style="color:var(--red)" role="alert"></p>
+      <div class="row"><button class="btn pri" id="rSubmit" type="submit" value="ok">โพสต์เตือนภัย</button><button class="btn" type="button" id="rCancel">ยกเลิก</button></div>
+    </form>
+  </dialog>
+</section>
+
+<!-- ===== Academy ===== -->
+<section id="view-academy" aria-labelledby="h-academy" hidden>
+  <div class="pagehead">
+    <h1 id="h-academy">สถาบันฝึกสืบ</h1>
+    <p class="lead">อ่านหลักฐานแล้วแตะจุดที่คุณคิดว่าน่าสงสัย ก่อนตัดสินว่าเป็นกลโกงหรือของจริง ทุกคดีเป็นสถานการณ์สมมติ ปิดคดีเพื่อเก็บแต้มและเหรียญ</p>
+  </div>
+  <div id="acBody"></div>
+</section>
+<dialog id="profDlg" aria-labelledby="pfTitle"><div class="stack" id="pfBody"></div></dialog>
+
+<!-- ===== Stats ===== -->
+<section id="view-stats" aria-labelledby="h-stats" hidden>
+  <div class="pagehead">
+    <h1 id="h-stats">แดชบอร์ดภัยไซเบอร์</h1>
+    <p class="lead">สรุปจากเคสบนกระดานเตือนภัยนี้ เพื่อดูว่าตอนนี้กลโกงแบบไหนกำลังถูกพูดถึงมากที่สุด</p>
+  </div>
+  <div class="banner" style="margin-bottom:18px"><svg class="ico"><use href="#i-info"/></svg><span id="statsNote"></span></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="charts">
+    <div class="card"><h3>เคสใน 14 วันที่ผ่านมา</h3><div class="trend" id="trend"></div><div class="axis"><span id="axL"></span><span id="axR"></span></div></div>
+    <div class="card"><h3>ประเภทภัยที่พบ (7 วันล่าสุด)</h3><div class="bars" id="catBars"></div></div>
+    <div class="card"><h3>รายงานรายภาค (7 วันล่าสุด)</h3><div class="bars" id="regionBars"></div><h3 style="margin-top:18px">จังหวัดที่มีรายงานมากที่สุด</h3><div class="bars" id="areaBars"></div></div>
+    <div class="card"><h3>ผลการตรวจในเครื่องนี้</h3><div class="bars" id="scanBars"></div><p class="note" style="margin-top:12px">นับจากการตรวจในเบราว์เซอร์นี้เท่านั้น</p></div>
+  </div>
+  <h2 style="margin:30px 0 14px">จุดสังเกตกลโกงที่พบบ่อย</h2>
+  <div class="tipgrid">
+    <div class="card"><h3>เร่งให้ตัดสินใจ</h3><p class="mute">ขู่ว่าบัญชีจะถูกระงับ พัสดุจะถูกตีกลับ หรือต้องจ่ายภายในไม่กี่ชั่วโมง ทางการจริงไม่บีบให้โอนเงินทันที</p></div>
+    <div class="card"><h3>ขอ OTP หรือให้ติดตั้งแอป</h3><p class="mute">ไม่มีธนาคารหรือหน่วยงานไหนขอ OTP ทางโทรศัพท์ และแอปนอกร้านค้าทางการอาจควบคุมเครื่องของคุณได้</p></div>
+    <div class="card"><h3>กำไรดีเกินจริง</h3><p class="mute">งานกดไลก์ รายได้รับประกันรายวัน หรือให้โอนมัดจำก่อนเริ่มงาน คือรูปแบบที่พบซ้ำๆ</p></div>
+  </div>
+  <p class="note" style="margin-top:18px">ถ้าถูกหลอกหรือโอนเงินไปแล้ว โทรแจ้งธนาคารเพื่อขออายัดทันที โทรสายด่วน AOC 1441 และแจ้งความออนไลน์ที่ thaipoliceonline.go.th</p>
+</section>
+
+</div>
+</main>
+
+<nav class="tabbar" aria-label="เมนูหลัก">
+  <a href="#inspector" data-nav="inspector"><svg class="ico"><use href="#i-search"/></svg>ตรวจสอบ</a>
+  <a href="#locker" data-nav="locker"><svg class="ico"><use href="#i-vault"/></svg>หลักฐาน</a>
+  <a href="#board" data-nav="board"><svg class="ico"><use href="#i-board"/></svg>เตือนภัย</a>
+  <a href="#academy" data-nav="academy"><svg class="ico"><use href="#i-badge"/></svg>ฝึกสืบ</a>
+  <a href="#stats" data-nav="stats"><svg class="ico"><use href="#i-chart"/></svg>สถิติ</a>
+</nav>
+<div id="toast" role="status" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
