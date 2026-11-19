@@ -271,3 +271,18 @@ mark.clue sup{font:600 .7rem var(--mono);margin-left:2px}
   body{padding-bottom:64px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- ส่วนที่เพิ่มสำหรับแอปตรวจผู้ขาย ---- */
+.qrow{border:1px solid var(--line);border-radius:12px;padding:12px 14px 10px;margin:0;background:var(--bg)}
+.qrow legend{font-weight:600;padding:0 6px}
+.qopts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.qrow .how{margin-top:6px}
+.pbar{height:12px;border-radius:4px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin:6px 0}
+.pbar i{display:block;height:100%}
+.chk{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.chk label{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer;min-height:44px}
+.chk input{margin-top:5px;width:18px;height:18px;accent-color:var(--green);flex:none}
+.tl{margin:0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:st}
+.tl li{counter-increment:st;position:relative;padding:12px 14px 12px 52px;border:1px solid var(--line);border-radius:12px;background:var(--bg);display:grid;gap:6px;justify-items:start}
+.tl li::before{content:counter(st);position:absolute;left:12px;top:12px;width:28px;height:28px;border-radius:50%;border:1px solid var(--green);color:var(--green);display:grid;place-items:center;font:600 .9rem var(--head)}
+.tl li b{font-weight:600}

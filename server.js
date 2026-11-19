@@ -13,7 +13,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const CATS = ['callcenter', 'phishing', 'fakepage', 'shop', 'invest', 'job', 'romance', 'other'];
+const CATS = ['noship', 'notmatch', 'fake', 'deposit', 'mule', 'phish', 'other'];
 const LIMITS = { body: 16 * 1024, reports: 5000, confirms: 50000, writesPerMin: 30, readsPerMin: 240 };
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -87,13 +87,13 @@ function parseReport(b) {
   if (!b || typeof b !== 'object') throw new HttpError(400, 'invalid body');
   const cat = CATS.includes(b.cat) ? b.cat : null;
   const area = clean(b.area, 60), title = clean(b.title, 90), detail = clean(b.detail, 700);
-  const ident = clean(b.ident, 200), author = clean(b.author, 30) || 'นักสืบ';
+  const ident = clean(b.ident, 200), author = clean(b.author, 30) || 'นักสืบ', platform = clean(b.platform, 40);
   if (!cat) throw new HttpError(400, 'invalid cat');
   if (!area) throw new HttpError(400, 'invalid area');
   if (title.length < 6) throw new HttpError(400, 'title too short');
   if (detail.length < 15) throw new HttpError(400, 'detail too short');
   if (/(?<!\d)\d{13}(?!\d)/.test(detail.replace(/[\s-]/g, ''))) throw new HttpError(400, 'looks like a national id');
-  return { cat, area, title, detail, ident, author };
+  return { cat, area, title, detail, ident, author, platform };
 }
 
 function parseConfirm(b, store) {

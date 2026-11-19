@@ -15,7 +15,7 @@ async function start(dir = tmp()) {
 const call = (base, p, o = {}) => fetch(base + p, {
   ...o, headers: { 'Content-Type': 'application/json', 'X-Client-Id': 'tester01', ...(o.headers || {}) }
 });
-const good = { cat: 'phishing', area: 'กรุงเทพมหานคร', title: 'SMS ธนาคารปลอม', detail: 'ข้อความอ้างว่าบัญชีถูกระงับ ให้กดลิงก์ยืนยัน', ident: 'bad.example' };
+const good = { cat: 'noship', area: 'กรุงเทพมหานคร', platform: 'Facebook', title: 'เพจขายกล้องบล็อกผู้ซื้อหลังโอน', detail: 'ราคาถูกมาก ให้โอนเต็มจำนวนก่อนส่งของ แล้วถูกบล็อกหลังโอน', ident: 'bad.example' };
 
 test('create + list report, uid is never exposed', async () => {
   const { s, base } = await start();
@@ -24,6 +24,7 @@ test('create + list report, uid is never exposed', async () => {
   const list = await (await call(base, '/api/reports')).json();
   assert.equal(list.reports.length, 1);
   assert.equal(list.reports[0].title, good.title);
+  assert.equal(list.reports[0].platform, 'Facebook');
   assert.equal('uid' in list.reports[0], false);
   s.close();
 });
@@ -33,6 +34,7 @@ test('report validation', async () => {
   const post = b => call(base, '/api/reports', { method: 'POST', body: JSON.stringify(b) });
   assert.equal((await post({ ...good, title: 'สั้น' })).status, 400);
   assert.equal((await post({ ...good, cat: 'nope' })).status, 400);
+  assert.equal((await post({ ...good, cat: 'callcenter' })).status, 400);
   assert.equal((await post({ ...good, detail: 'เลขบัตร 1234567890123 อยู่ตรงนี้นะ' })).status, 400);
   assert.equal((await call(base, '/api/reports', { method: 'POST', body: JSON.stringify(good), headers: { 'X-Client-Id': 'x' } })).status, 400);
   assert.equal((await call(base, '/api/reports', { method: 'POST', body: '{bad json' })).status, 400);

@@ -18,11 +18,11 @@
       <span><b>Catch Me If You Can</b><small>จับฉันให้ได้ถ้าคุณกระป๋อง</small></span>
     </a>
     <nav class="tabs" aria-label="เมนูหลัก">
-      <a href="#inspector" data-nav="inspector"><svg class="ico"><use href="#i-search"/></svg>ตรวจสอบ</a>
-      <a href="#locker" data-nav="locker"><svg class="ico"><use href="#i-vault"/></svg>ตู้เก็บหลักฐาน</a>
-      <a href="#board" data-nav="board"><svg class="ico"><use href="#i-board"/></svg>กระดานเตือนภัย</a>
+      <a href="#inspector" data-nav="inspector"><svg class="ico"><use href="#i-search"/></svg>ตรวจผู้ขาย</a>
+      <a href="#guide" data-nav="guide"><svg class="ico"><use href="#i-ok"/></svg>เช็กก่อนโอน</a>
+      <a href="#locker" data-nav="locker"><svg class="ico"><use href="#i-vault"/></svg>ตู้หลักฐาน</a>
+      <a href="#board" data-nav="board"><svg class="ico"><use href="#i-board"/></svg>กระดานผู้ขาย</a>
       <a href="#academy" data-nav="academy"><svg class="ico"><use href="#i-badge"/></svg>ฝึกสืบ</a>
-      <a href="#stats" data-nav="stats"><svg class="ico"><use href="#i-chart"/></svg>สถิติ</a>
     </nav>
     <button class="rankchip" id="rankBtn" type="button" aria-label="เปิดแฟ้มประวัตินักสืบ"></button>
     <button class="theme" id="themeBtn" type="button" aria-label="สลับโหมดสีมืด/สว่าง"><svg class="ico"><use href="#i-theme"/></svg></button>
@@ -52,34 +52,48 @@
 <main>
 <div class="wrap">
 
-<!-- ===== Inspector ===== -->
+<!-- ===== ตรวจผู้ขาย ===== -->
 <section id="view-inspector" aria-labelledby="h-inspector">
   <div class="hero">
-    <h1 id="h-inspector">ตรวจก่อนกด ตรวจก่อนโอน</h1>
-    <p class="lead">วางลิงก์ ข้อความ SMS เบอร์โทร หรือเลขบัญชีที่น่าสงสัย ระบบจะไล่ดูร่องรอยให้เหมือนนักสืบ แล้วบอกว่าควรไว้ใจแค่ไหน</p>
+    <h1 id="h-inspector">ตรวจผู้ขายก่อนโอน</h1>
+    <p class="lead">สืบประวัติร้านค้าและผู้ขายออนไลน์ก่อนจ่ายเงิน ใส่ราคา แชต ลิงก์ และเลขบัญชี แล้วตอบแบบสอบสวน 11 ข้อ ระบบจะไล่ร่องรอยและบอกว่ายังไม่ควรโอนเพราะอะไร</p>
   </div>
   <div class="grid2">
     <div class="stack">
-      <div class="card">
-        <label class="lb" for="q">สิ่งที่อยากตรวจ</label>
-        <textarea id="q" class="field" placeholder="วางลิงก์ ข้อความ เบอร์โทร หรือเลขบัญชีที่นี่" maxlength="3000"></textarea>
-        <div class="row" style="margin-top:12px">
-          <button class="btn pri" id="scanBtn" type="button"><svg class="ico"><use href="#i-search"/></svg>ตรวจสอบ</button>
-          <button class="btn" id="clearBtn" type="button">ล้าง</button>
+      <div class="card stack">
+        <h2>ข้อมูลผู้ขาย</h2>
+        <div class="formgrid">
+          <div><label class="lb" for="sName">ชื่อร้าน/เพจ/ผู้ขาย</label><input class="field" id="sName" maxlength="80" placeholder="เช่น CamZone มือสอง"></div>
+          <div><label class="lb" for="sPlat">ซื้อขายผ่านที่ไหน</label><select class="field" id="sPlat"></select></div>
+          <div class="full"><label class="lb" for="sItem">สินค้าที่จะซื้อ</label><input class="field" id="sItem" maxlength="100" placeholder="เช่น กล้องมิเรอร์เลสมือสอง"></div>
+          <div><label class="lb" for="sPrice">ราคาที่ผู้ขายเสนอ (บาท)</label><input class="field" id="sPrice" type="number" inputmode="numeric" min="0" placeholder="2900"></div>
+          <div><label class="lb" for="sMarket">ราคาตลาดโดยประมาณ (บาท)</label><input class="field" id="sMarket" type="number" inputmode="numeric" min="0" placeholder="9900"></div>
+          <div class="full"><label class="lb" for="sLink">ลิงก์ร้านหรือลิงก์ชำระเงิน</label><input class="field" id="sLink" maxlength="300" placeholder="วางลิงก์ที่ผู้ขายส่งมา"></div>
+          <div class="full"><label class="lb" for="sIds">เลขบัญชี เบอร์โทร ไอดีไลน์ หรือชื่อเพจ</label><input class="field" id="sIds" maxlength="200" placeholder="คั่นหลายรายการด้วยเว้นวรรคหรือจุลภาค"></div>
+          <div class="full"><label class="lb" for="sChat">แชตหรือประกาศขาย</label><textarea class="field" id="sChat" maxlength="3000" placeholder="วางข้อความจากแชตหรือประกาศขายที่นี่ ระบบจะทำเครื่องหมายร่องรอยในข้อความให้"></textarea></div>
         </div>
+      </div>
+      <div class="card stack">
+        <h2>แบบสอบสวนผู้ขาย</h2>
+        <p class="note">ตอบเท่าที่รู้ ข้อที่ยังไม่ทราบจะกลายเป็น “งานสืบที่ยังค้าง” พร้อมวิธีตรวจ</p>
+        <div id="qList" class="stack"></div>
+        <div class="row">
+          <button class="btn pri" id="scanBtn" type="button"><svg class="ico"><use href="#i-search"/></svg>ตรวจผู้ขาย</button>
+          <button class="btn" id="clearBtn" type="button">ล้างฟอร์ม</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="note" style="margin-bottom:8px">ลองตัวอย่าง (ผู้ขายสมมติทั้งหมด)</p>
+        <div class="samples" id="samples"></div>
         <div style="margin-top:16px">
           <p class="note" style="margin-bottom:8px">ความเข้มงวดในการตัดสิน</p>
           <div class="row" id="modeChips" role="group" aria-label="ความเข้มงวดในการตัดสิน"></div>
           <p class="note" id="modeNote" style="margin-top:8px"></p>
         </div>
-        <div style="margin-top:16px">
-          <p class="note" style="margin-bottom:8px">ลองตัวอย่าง</p>
-          <div class="samples" id="samples"></div>
-        </div>
       </div>
-      <div class="banner"><svg class="ico"><use href="#i-info"/></svg><span>ผลนี้มาจากการตรวจเบื้องต้นในเบราว์เซอร์ (รูปแบบลิงก์ ชื่อโดเมน ถ้อยคำที่พบบ่อยในกลโกง และเคสบนกระดานเตือนภัย) ไม่ได้ต่อกับฐานข้อมูลบัญชีม้าหรือเว็บอันตรายของหน่วยงานรัฐ จึงไม่ใช่การรับรองว่าปลอดภัย</span></div>
+      <div class="banner"><svg class="ico"><use href="#i-info"/></svg><span>ผลที่ได้เป็นการประเมินสัญญาณเสี่ยงจากข้อมูลที่คุณให้ ไม่ได้ตรวจกับฐานข้อมูลทะเบียนร้านค้าหรือบัญชีม้าของหน่วยงานรัฐ และไม่ใช่การตัดสินว่าใครโกง ใช้เป็นความเห็นที่สองก่อนโอนเท่านั้น</span></div>
       <details class="card brands" id="brandDet">
-        <summary>แบรนด์และโดเมนทางการที่ใช้เทียบ <span class="note" id="brandCount"></span></summary>
+        <summary>แบรนด์และโดเมนทางการที่ใช้ตรวจลิงก์ <span class="note" id="brandCount"></span></summary>
         <div id="brandList" class="stack" style="margin-top:14px"></div>
         <p class="note" style="margin-top:12px">รายชื่อนี้คัดจากแหล่งข้อมูลสาธารณะและความรู้ทั่วไป อาจไม่ครบหรือล้าสมัย โดเมนที่ไม่อยู่ในรายชื่อไม่ได้แปลว่าปลอม และโดเมนที่อยู่ในรายชื่อก็ยังควรพิมพ์เข้าเว็บด้วยตัวเอง แพลตฟอร์มอย่าง Facebook, LINE และ Google เปิดให้ผู้ใช้สร้างเพจหรือฟอร์มเองได้ ระบบจึงไม่ให้สีเขียวกับลิงก์เหล่านี้ทันที</p>
       </details>
@@ -89,9 +103,18 @@
       </div>
     </div>
     <div id="result" aria-live="polite">
-      <div class="empty"><svg class="ico"><use href="#i-search"/></svg><h3>ผลการตรวจจะอยู่ตรงนี้</h3><p>เขียว ปลอดภัยเบื้องต้น เหลือง น่าสงสัย แดง อันตราย พร้อมเหตุผลทุกข้อ</p></div>
+      <div class="empty"><svg class="ico"><use href="#i-search"/></svg><h3>ผลการสืบจะอยู่ตรงนี้</h3><p>กรอกข้อมูลผู้ขาย ตอบแบบสอบสวน แล้วกดตรวจ จะได้สัญญาณเสี่ยงทีละข้อ ภาพเกิดเหตุในแชต และงานสืบที่ควรทำต่อ</p></div>
     </div>
   </div>
+</section>
+
+<!-- ===== เช็กก่อนโอน ===== -->
+<section id="view-guide" aria-labelledby="h-guide" hidden>
+  <div class="pagehead">
+    <h1 id="h-guide">เช็กก่อนโอน และถ้าโอนไปแล้ว</h1>
+    <p class="lead">รายการตรวจ 10 ข้อก่อนจ่ายเงินให้คนแปลกหน้า และขั้นตอนที่ควรทำทันทีถ้าโอนไปแล้ว พร้อมรายการหลักฐานที่ต้องมีติดมือ</p>
+  </div>
+  <div id="guideBody"></div>
 </section>
 
 <!-- ===== Locker ===== -->
@@ -106,14 +129,14 @@
 <!-- ===== Board ===== -->
 <section id="view-board" aria-labelledby="h-board" hidden>
   <div class="pagehead row">
-    <div><h1 id="h-board">กระดานเตือนภัยมิจฉาชีพ</h1>
-    <p class="lead">เคสที่ผู้ใช้ช่วยกันรายงาน กดยืนยันถ้าเจอเหมือนกัน หรือเพิ่มเบาะแสที่คุณมี</p></div>
+    <div><h1 id="h-board">กระดานเตือนภัยผู้ขาย</h1>
+    <p class="lead">เคสผู้ขายที่ชุมชนช่วยกันรายงาน กดยืนยันถ้าเจอเหมือนกัน หรือเพิ่มเบาะแสที่คุณมี ค้นด้วยเลขบัญชี ลิงก์ หรือชื่อเพจได้</p></div>
     <span class="sp"></span>
     <button class="btn pri" id="newReport" type="button">แจ้งเบาะแสใหม่</button>
   </div>
   <div id="boardStatus" style="margin-bottom:16px"></div>
   <div class="filters">
-    <div class="row" id="catChips" role="group" aria-label="กรองตามประเภทภัย"></div>
+    <div class="row" id="catChips" role="group" aria-label="กรองตามประเภทปัญหา"></div>
     <div class="row">
       <input class="field" id="bSearch" type="search" placeholder="ค้นหาจากข้อความ ลิงก์ เบอร์ หรือเลขบัญชี" style="flex:1;min-width:220px;width:auto" aria-label="ค้นหาเคส">
       <select class="field" id="bArea" style="width:auto;min-width:180px" aria-label="กรองตามพื้นที่"></select>
@@ -124,12 +147,13 @@
   <dialog id="reportDlg" aria-labelledby="rdTitle">
     <form method="dialog" id="reportForm" class="stack" novalidate>
       <h2 id="rdTitle">แจ้งเบาะแสใหม่</h2>
-      <div class="banner warn"><svg class="ico"><use href="#i-warn"/></svg><span>ห้ามใส่ชื่อ เลขบัตรประชาชน หรือข้อมูลส่วนตัวของคุณ เคสที่โพสต์จะมองเห็นได้โดยผู้ที่เปิดหน้านี้</span></div>
+      <div class="banner warn"><svg class="ico"><use href="#i-warn"/></svg><span>ห้ามใส่ชื่อ เลขบัตรประชาชน หรือข้อมูลส่วนตัวของคุณ และเล่าเฉพาะข้อเท็จจริงที่เกิดขึ้นกับคุณ ไม่กล่าวหาตัวบุคคล เคสที่โพสต์จะมองเห็นได้โดยผู้ที่เปิดหน้านี้</span></div>
       <div class="formgrid">
-        <div><label class="lb" for="rCat">ประเภทภัย</label><select class="field" id="rCat"></select></div>
+        <div><label class="lb" for="rCat">ประเภทปัญหา</label><select class="field" id="rCat"></select></div>
         <div><label class="lb" for="rArea">พื้นที่</label><select class="field" id="rArea"></select></div>
-        <div class="full"><label class="lb" for="rTitle">หัวข้อสั้นๆ</label><input class="field" id="rTitle" maxlength="90" placeholder="เช่น โทรอ้างเป็นเจ้าหน้าที่ศุลกากร"></div>
-        <div class="full"><label class="lb" for="rDetail">เกิดอะไรขึ้น</label><textarea class="field" id="rDetail" maxlength="700" placeholder="เล่าขั้นตอนที่มิจฉาชีพใช้ ข้อความที่ได้รับ และสิ่งที่ขอให้ทำ"></textarea></div>
+        <div class="full"><label class="lb" for="rPlat">แพลตฟอร์มที่เจอผู้ขาย</label><select class="field" id="rPlat"></select></div>
+        <div class="full"><label class="lb" for="rTitle">หัวข้อสั้นๆ</label><input class="field" id="rTitle" maxlength="90" placeholder="เช่น เพจขายกล้องรับโอนแล้วบล็อกผู้ซื้อ"></div>
+        <div class="full"><label class="lb" for="rDetail">เกิดอะไรขึ้น</label><textarea class="field" id="rDetail" maxlength="700" placeholder="เล่าว่าซื้ออะไร ราคาเท่าไหร่ ผู้ขายขอให้ทำอะไร และเกิดอะไรขึ้นหลังโอน"></textarea></div>
         <div class="full"><label class="lb" for="rIdent">ลิงก์ เบอร์โทร เลขบัญชี หรือชื่อเพจ (ไม่บังคับ)</label><input class="field" id="rIdent" maxlength="200" placeholder="คั่นหลายรายการด้วยเว้นวรรคหรือจุลภาค"></div>
       </div>
       <p class="note" id="rErr" style="color:var(--red)" role="alert"></p>
@@ -142,44 +166,22 @@
 <section id="view-academy" aria-labelledby="h-academy" hidden>
   <div class="pagehead">
     <h1 id="h-academy">สถาบันฝึกสืบ</h1>
-    <p class="lead">อ่านหลักฐานแล้วแตะจุดที่คุณคิดว่าน่าสงสัย ก่อนตัดสินว่าเป็นกลโกงหรือของจริง ทุกคดีเป็นสถานการณ์สมมติ ปิดคดีเพื่อเก็บแต้มและเหรียญ</p>
+    <p class="lead">อ่านแชตของผู้ขายแล้วแตะจุดที่คุณคิดว่าน่าสงสัย ก่อนตัดสินว่าเป็นกลโกงหรือร้านจริง ทุกคดีเป็นสถานการณ์สมมติ ปิดคดีเพื่อเก็บแต้มและเหรียญ</p>
   </div>
   <div id="acBody"></div>
 </section>
 <dialog id="profDlg" aria-labelledby="pfTitle"><div class="stack" id="pfBody"></div></dialog>
 
-<!-- ===== Stats ===== -->
-<section id="view-stats" aria-labelledby="h-stats" hidden>
-  <div class="pagehead">
-    <h1 id="h-stats">แดชบอร์ดภัยไซเบอร์</h1>
-    <p class="lead">สรุปจากเคสบนกระดานเตือนภัยนี้ เพื่อดูว่าตอนนี้กลโกงแบบไหนกำลังถูกพูดถึงมากที่สุด</p>
-  </div>
-  <div class="banner" style="margin-bottom:18px"><svg class="ico"><use href="#i-info"/></svg><span id="statsNote"></span></div>
-  <div class="kpis" id="kpis"></div>
-  <div class="charts">
-    <div class="card"><h3>เคสใน 14 วันที่ผ่านมา</h3><div class="trend" id="trend"></div><div class="axis"><span id="axL"></span><span id="axR"></span></div></div>
-    <div class="card"><h3>ประเภทภัยที่พบ (7 วันล่าสุด)</h3><div class="bars" id="catBars"></div></div>
-    <div class="card"><h3>รายงานรายภาค (7 วันล่าสุด)</h3><div class="bars" id="regionBars"></div><h3 style="margin-top:18px">จังหวัดที่มีรายงานมากที่สุด</h3><div class="bars" id="areaBars"></div></div>
-    <div class="card"><h3>ผลการตรวจในเครื่องนี้</h3><div class="bars" id="scanBars"></div><p class="note" style="margin-top:12px">นับจากการตรวจในเบราว์เซอร์นี้เท่านั้น</p></div>
-  </div>
-  <h2 style="margin:30px 0 14px">จุดสังเกตกลโกงที่พบบ่อย</h2>
-  <div class="tipgrid">
-    <div class="card"><h3>เร่งให้ตัดสินใจ</h3><p class="mute">ขู่ว่าบัญชีจะถูกระงับ พัสดุจะถูกตีกลับ หรือต้องจ่ายภายในไม่กี่ชั่วโมง ทางการจริงไม่บีบให้โอนเงินทันที</p></div>
-    <div class="card"><h3>ขอ OTP หรือให้ติดตั้งแอป</h3><p class="mute">ไม่มีธนาคารหรือหน่วยงานไหนขอ OTP ทางโทรศัพท์ และแอปนอกร้านค้าทางการอาจควบคุมเครื่องของคุณได้</p></div>
-    <div class="card"><h3>กำไรดีเกินจริง</h3><p class="mute">งานกดไลก์ รายได้รับประกันรายวัน หรือให้โอนมัดจำก่อนเริ่มงาน คือรูปแบบที่พบซ้ำๆ</p></div>
-  </div>
-  <p class="note" style="margin-top:18px">ถ้าถูกหลอกหรือโอนเงินไปแล้ว โทรแจ้งธนาคารเพื่อขออายัดทันที โทรสายด่วน AOC 1441 และแจ้งความออนไลน์ที่ thaipoliceonline.go.th</p>
-</section>
 
 </div>
 </main>
 
 <nav class="tabbar" aria-label="เมนูหลัก">
-  <a href="#inspector" data-nav="inspector"><svg class="ico"><use href="#i-search"/></svg>ตรวจสอบ</a>
+  <a href="#inspector" data-nav="inspector"><svg class="ico"><use href="#i-search"/></svg>ตรวจผู้ขาย</a>
+  <a href="#guide" data-nav="guide"><svg class="ico"><use href="#i-ok"/></svg>เช็กก่อนโอน</a>
   <a href="#locker" data-nav="locker"><svg class="ico"><use href="#i-vault"/></svg>หลักฐาน</a>
-  <a href="#board" data-nav="board"><svg class="ico"><use href="#i-board"/></svg>เตือนภัย</a>
+  <a href="#board" data-nav="board"><svg class="ico"><use href="#i-board"/></svg>กระดาน</a>
   <a href="#academy" data-nav="academy"><svg class="ico"><use href="#i-badge"/></svg>ฝึกสืบ</a>
-  <a href="#stats" data-nav="stats"><svg class="ico"><use href="#i-chart"/></svg>สถิติ</a>
 </nav>
 <div id="toast" role="status" hidden></div>
 
