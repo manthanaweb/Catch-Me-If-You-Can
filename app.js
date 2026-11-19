@@ -46,6 +46,7 @@ function route(){
   if(!VIEWS.includes(h))h='inspector';
   VIEWS.forEach(v=>{$('#view-'+v).hidden=v!==h});
   $$('[data-nav]').forEach(a=>a.setAttribute('aria-current',a.dataset.nav===h?'page':'false'));
+  document.body.dataset.view=h;
   if(h==='guide')renderGuide();
   if(h==='academy')renderAcademy();
   if(h==='board')renderBoard();
@@ -383,9 +384,9 @@ function investigate(f){
   QUESTIONS.forEach(q=>{
     const a=(f.ans&&f.ans[q.id])||'?';
     const o=q.opts.find(x=>x.v===a)||q.opts.find(x=>x.v==='?');
-    if(o.v==='?')out.pending.push({t:q.q,how:q.how});
+    if(o.v==='?')out.pending.push({id:q.id,t:q.q,how:q.how});
     score+=o.w;
-    if(o.t&&(o.w>=6||o.w<0))out.findings.push({sev:o.w>=14?'bad':o.w>=6?'warn':'ok',title:o.t,detail:o.d||'',w:o.w});
+    if(o.t&&(o.w>=6||o.w<0))out.findings.push({sev:o.w>=14?'bad':o.w>=6?'warn':'ok',title:o.t,detail:o.d||'',w:o.w,qid:q.id});
   });
   // 2) เทียบราคาตลาด
   const price=+f.price||0,market=+f.market||0;
@@ -416,6 +417,13 @@ function investigate(f){
   phones.forEach(p=>out.ents.push('เบอร์ '+p));accts.forEach(p=>out.ents.push('บัญชี '+p));
   const tokens=[].concat(urls,phones,accts,extra,f.name?[f.name]:[]);
   const hits=tokens.length?matchBoardFor(tokens):[];
+  out.nodes=[];
+  const kindOf=t=>urls.includes(t)?'link':phones.includes(t)?'phone':accts.includes(t)?'acct':(f.name&&t===f.name)?'name':'id';
+  tokens.forEach(t=>{
+    const hh=matchBoardFor([t]),ui=urls.indexOf(t);
+    const us=ui>=0&&ua[ui]?ua[ui].score:0;
+    out.nodes.push({k:kindOf(t),label:t,sev:hh.length||us>=40?'bad':us>=15?'warn':'ok',hits:hh});
+  });
   if(hits.length){
     const v=hits.reduce((a,r)=>a+boardCounts(r.id).verify,0);
     const w=hits.length>=2||v>=10?60:45;
@@ -423,6 +431,21 @@ function investigate(f){
     score+=w;out.hits=hits;
   }else if(tokens.length){
     out.findings.push({sev:'info',title:'ไม่พบตัวระบุนี้บนกระดานผู้ขาย',detail:'ไม่พบ ไม่ได้แปลว่าปลอดภัย อาจแค่ยังไม่มีใครรายงาน',w:0});
+  }
+  // 4b) ความขัดแย้งในคำให้การ
+  const PLAT_DOM={Shopee:['shopee.co.th','shopee.com','spx.co.th'],Lazada:['lazada.co.th','lazada.com']};
+  if(PLAT_DOM[f.plat]){
+    const bad=ua.find(u=>!PLAT_DOM[f.plat].includes(u.reg));
+    if(bad){score+=14;out.findings.push({sev:'bad',title:'ขัดแย้ง: อ้างซื้อผ่าน '+f.plat+' แต่ลิงก์ไม่ใช่โดเมนของ '+f.plat,detail:'ลิงก์ที่ได้รับชี้ไปที่ '+bad.host+' ผู้ซื้อที่ถูกชวนไปจ่ายนอกแพลตฟอร์มจะไม่ได้รับความคุ้มครอง',w:14})}
+  }
+  const al=f.ans||{};
+  if(/(เก็บเงินปลายทาง\s*(ได้|ค่ะ|ครับ)|cod\s*ได้|จ่าย\s*เมื่อ\s*รับ\s*ของ)/i.test(f.chat||'')&&(al.when==='full'||al.when==='deposit')){
+    score+=8;out.findings.push({sev:'bad',title:'ขัดแย้ง: ในแชตบอกว่าเก็บเงินปลายทางได้ แต่คุณตอบว่าต้องโอนก่อน',detail:'คำพูดของผู้ขายไม่ตรงกับข้อเรียกร้องจริง ให้ถือว่าเงื่อนไขล่าสุดคือเงื่อนไขที่แท้จริง',w:8});
+  }
+  const pm=(f.chat||'').match(/(?:ราคา|฿)\s*([\d,]{3,8})|([\d,]{3,8})\s*(?:บาท|฿)/);
+  if(pm&&+f.price>0){
+    const n=+String(pm[1]||pm[2]).replace(/,/g,'');
+    if(n>0&&Math.abs(n-+f.price)/+f.price>0.1){score+=4;out.findings.push({sev:'warn',title:'ขัดแย้ง: ราคาในแชต ฿'+n.toLocaleString('th-TH')+' ไม่ตรงกับราคาที่คุณกรอก',detail:'ตรวจว่าเป็นราคาสินค้า ค่าส่ง หรือผู้ขายเปลี่ยนราคาระหว่างคุย',w:4})}
   }
   // 5) สัญญาณที่เกิดร่วมกัน
   const a=f.ans||{},ids=ta.f.map(x=>x.id);
@@ -434,6 +457,8 @@ function investigate(f){
   }
   if(!out.findings.some(x=>x.sev==='bad'||x.sev==='warn')&&!out.pending.length)
     out.findings.push({sev:'ok',title:'ไม่พบสัญญาณเสี่ยงสำคัญจากข้อมูลที่ให้มา',detail:'ผลนี้ขึ้นกับความถูกต้องของข้อมูลที่คุณตอบ',w:0});
+  const pq=out.pending.filter(p=>p.id).length;
+  out.complete=Math.round((QUESTIONS.length-pq+(out.price?1:0))/(QUESTIONS.length+1)*100);
   out.score=Math.max(0,score);
   return finish(out);
 }
@@ -477,55 +502,6 @@ function priceBarHTML(r){
   const col=p.w>=12?'var(--red)':p.w>0?'var(--yellow)':'var(--green)';
   return `<div><h3>เทียบราคากับตลาด</h3><div class='pbar'><i style='width:${pct}%;background:${col}'></i></div><p class='note'>เสนอ ฿${p.price.toLocaleString('th-TH')} เทียบตลาด ฿${p.market.toLocaleString('th-TH')} คือ ${Math.round(p.r*100)}% ของราคาตลาด</p></div>`;
 }
-function renderResult(r){
-  lastResult=r;
-  const L=LV[r.level];
-  const segs=Array.from({length:20},(_,i)=>'<i class="'+(i<Math.round(r.score/5)?'on':'')+'"></i>').join('');
-  const fl=r.findings.map(x=>'<li data-sev="'+x.sev+'">'+ico(SEVICON[x.sev])+'<span><b>'+esc(x.title)+'</b><span class="d">'+esc(x.detail)+'</span></span><span class="w">'+(x.w>0?'+'+x.w:x.w<0?String(x.w):'')+'</span></li>').join('');
-  const ents=r.ents.length?'<div><h3>ตัวระบุที่ตรวจพบ</h3><div class="ent">'+r.ents.map(e=>'<span class="mono">'+esc(e)+'</span>').join('')+'</div></div>':'';
-  const scene=r.input?'<div><h3>ภาพเกิดเหตุ (แชต/ประกาศ)</h3>'+sceneHTML(r)+'</div>':'';
-  const pend=r.pending.length?`<div><h3>งานสืบที่ยังค้าง (${r.pending.length})</h3><ol class='todo'>${r.pending.map(p=>`<li><b>${esc(p.t)}</b><br><span class='note'>${esc(p.how)}</span></li>`).join('')}</ol></div>`:'';
-  const name=r.form.name||r.form.item||'ผู้ขายที่ไม่ระบุชื่อ';
-  $('#result').innerHTML=
-   '<div class="verdict" data-level="'+r.level+'">'+
-     '<div class="vh"><span class="stamp">'+L.stamp+'</span><div class="caseid">แฟ้มคดี '+esc(r.caseId||'-')+' · '+esc(name)+'</div><h2>'+L.label+'</h2><p>'+L.sub+'</p>'+
-     '<div class="meter" role="img" aria-label="คะแนนความเสี่ยง '+r.score+' จาก 100">'+segs+'</div><div class="note">คะแนนความเสี่ยง '+r.score+' / 100 · โหมด'+MODES[mode].label+' (เหลืองตั้งแต่ '+MODES[mode].y+' แดงตั้งแต่ '+MODES[mode].r+')</div></div>'+
-     '<div class="vb">'+
-       priceBarHTML(r)+
-       '<div><h3>สัญญาณที่พบ</h3><ul class="finds">'+fl+'</ul></div>'+scene+ents+pend+
-       '<div><h3>จ่ายเงินอย่างไรให้ปลอดภัยขึ้น</h3><ol class="todo">'+L.pay.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol></div>'+
-       '<div class="row"><button class="btn pri" id="toLocker" type="button">เก็บหลักฐานเข้าตู้</button><button class="btn" id="toBoard" type="button">รายงานผู้ขายนี้</button><button class="btn" id="toGuide" type="button">เช็กก่อนโอน</button><span id="aiSlot"></span></div>'+
-       '<div id="aiOut"></div>'+caseBoxHTML(r)+
-       '<p class="note">ผลนี้เป็นการประเมินสัญญาณเสี่ยงจากข้อมูลที่คุณให้ ไม่ใช่การตัดสินว่าใครโกง และไม่ใช่การรับรองร้านค้า</p>'+
-     '</div></div>';
-  $('#toBoard').addEventListener('click',()=>openReportFromResult());
-  $('#toLocker').addEventListener('click',()=>{location.hash='#locker'});
-  $('#toGuide').addEventListener('click',()=>{location.hash='#guide'});
-  bindCaseBox(r);
-  setupAI();
-}
-
-async function runScan(){
-  const f=readForm();
-  if(!formHasInput(f)){toast('กรอกข้อมูลผู้ขายอย่างน้อย 1 อย่าง เช่น ชื่อร้าน ลิงก์ เลขบัญชี หรือข้อความแชต');return}
-  const res=investigate(f);
-  $('#scanBtn').disabled=true;
-  const names=['อ่านข้อมูลผู้ขายและแบบสอบสวน','ตรวจลิงก์และถ้อยคำในแชต','เทียบราคากับตลาด','เทียบกับเคสบนกระดานผู้ขาย'];
-  $('#result').innerHTML='<div class="card"><h3>กำลังสืบหาร่องรอย</h3><ul class="steps" style="margin-top:14px">'+names.map((n,i)=>'<li id="st'+i+'"><span class="tick"></span>'+n+'</li>').join('')+'</ul><div class="scanbar"><i></i></div></div>';
-  for(let i=0;i<names.length;i++){
-    await sleep(reduced?0:280);
-    const li=$('#st'+i);if(li){li.classList.add('done');li.querySelector('.tick').innerHTML=ico('check')}
-  }
-  await sleep(reduced?0:180);
-  const rec=upsertCase(f,res);
-  res.caseId=rec.id;res.caseRec=rec;
-  renderResult(res);
-  if(rec.isNew)onNewCase(res);
-  renderHistory();
-  $('#scanBtn').disabled=false;
-  const vd=$('.verdict');if(vd&&window.innerWidth<900)vd.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});
-}
-
 /* ---------- แฟ้มคดี ---------- */
 const CASE_STATUS={open:'กำลังสืบ',scam:'ปิดคดี: เสี่ยง/ไม่ซื้อ',safe:'ปิดคดี: ซื้อได้',sent:'ส่งต่อเจ้าหน้าที่แล้ว'};
 const hash32=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};
@@ -729,6 +705,7 @@ $('#guideBody').addEventListener('change',e=>{
   const c=e.target.closest('input[type=checkbox]');if(!c)return;
   if(c.dataset.chk!=null){
     const s=chkState();s[c.dataset.chk]=c.checked;LS.set('cmiyc:chk',s);
+    missionSet('m_check',CHECKLIST.filter((_,i)=>s[i]).length);
     renderGuide();
     if(CHECKLIST.every((_,i)=>s[i])&&!LS.get('cmiyc:chkdone',false)){LS.set('cmiyc:chkdone',true);DET.checklist=(DET.checklist||0)+1;awardXP('checklist',10,'ทำเช็กลิสต์ก่อนโอนครบ')}
   }else if(c.dataset.ev!=null){
@@ -1365,13 +1342,15 @@ const BADGES=[
   {id:'team',n:'พลังชุมชน',d:'ยืนยันเคสของคนอื่นครบ 3 ครั้ง',ok:d=>d.verifies>=3},
   {id:'vault',n:'ผู้พิทักษ์หลักฐาน',d:'เก็บหลักฐานเข้าตู้นิรภัย',ok:d=>d.evidence>=1},
   {id:'cadet',n:'จบหลักสูตรผู้ซื้อฉลาด',d:'ปิดคดีฝึกสืบครบทุกคดี',ok:d=>Object.keys(d.quiz).length>=CASES.length},
-  {id:'hawk',n:'สายตาเหยี่ยว',d:'ได้ 3 ดาวในคดีฝึกสืบ 3 คดี',ok:d=>Object.values(d.quiz).filter(q=>q.stars>=3).length>=3}
+  {id:'hawk',n:'สายตาเหยี่ยว',d:'ได้ 3 ดาวในคดีฝึกสืบ 3 คดี',ok:d=>Object.values(d.quiz).filter(q=>q.stars>=3).length>=3},
+  {id:'closer',n:'นักปิดคดี',d:'ปิดงานสืบที่ค้างครบ 10 ข้อ',ok:d=>(d.closed||0)>=10},
+  {id:'interrogator',n:'ผู้สอบสวนฝีมือดี',d:'ผ่านห้องสอบสวนครบทุกห้อง',ok:d=>Object.keys(d.inter||{}).length>=INTERROGATIONS.length}
 ];
 const DET_KEY='cmiyc:det';
-const detDefault=()=>({xp:0,scans:0,reds:0,reports:0,verifies:0,tips:0,evidence:0,quiz:{},checklist:0,badges:{},day:'',today:{}});
+const detDefault=()=>({xp:0,scans:0,reds:0,reports:0,verifies:0,tips:0,evidence:0,quiz:{},checklist:0,closed:0,inter:{},mis:{},badges:{},day:'',today:{}});
 let DET=Object.assign(detDefault(),LS.get(DET_KEY,{}));
 const detSave=()=>LS.set(DET_KEY,DET);
-const XP_CAP={scan:10,verify:5,tip:5,evidence:5};
+const XP_CAP={scan:10,verify:5,tip:5,evidence:5,close:10};
 const rankOf=xp=>{let i=0;RANKS.forEach((r,k)=>{if(xp>=r.min)i=k});return i};
 function checkBadges(){
   const out=[];
@@ -1386,6 +1365,7 @@ function awardXP(kind,xp,label){
   else if(kind==='verify')DET.verifies++;
   else if(kind==='tip')DET.tips++;
   else if(kind==='evidence')DET.evidence++;
+  else if(kind==='close')DET.closed++;
   const capped=XP_CAP[kind]&&cnt>=XP_CAP[kind];
   const before=rankOf(DET.xp);
   let gained=0;
@@ -1399,6 +1379,7 @@ function awardXP(kind,xp,label){
   toast(msg);
 }
 function onNewCase(res){
+  missionTick('m_open');
   DET.scans++;
   if(res.level==='red')DET.reds++;
   awardXP('scan',5,'เปิดคดี '+res.caseId);
@@ -1414,7 +1395,7 @@ let pfArm=0;
 function openProfile(){
   const i=rankOf(DET.xp),r=RANKS[i],nx=RANKS[i+1];
   const pct=nx?Math.round((DET.xp-r.min)/(nx.min-r.min)*100):100;
-  const stats=[[DET.scans,'คดีที่เปิด'],[DET.reds,'ผู้ขายเสี่ยงสูงที่ตรวจเจอ'],[DET.reports,'โพสต์เตือนภัย'],[DET.verifies,'ยืนยันเคส'],[DET.evidence,'หลักฐานที่เก็บ'],[Object.keys(DET.quiz).length+'/'+CASES.length,'คดีฝึกสืบ']];
+  const stats=[[DET.scans,'คดีที่เปิด'],[DET.reds,'ผู้ขายเสี่ยงสูงที่ตรวจเจอ'],[DET.reports,'โพสต์เตือนภัย'],[DET.verifies,'ยืนยันเคส'],[DET.evidence,'หลักฐานที่เก็บ'],[DET.closed||0,'ปิดงานสืบ'],[Object.keys(DET.inter||{}).length+'/'+INTERROGATIONS.length,'ห้องสอบสวน'],[Object.keys(DET.quiz).length+'/'+CASES.length,'คดีฝึกสืบ']];
   $('#pfBody').innerHTML=`
    <div class='row'><h2 id='pfTitle'>แฟ้มประวัตินักสืบ</h2><span class='sp'></span><button class='btn sm' id='pfClose' type='button'>ปิด</button></div>
    <div class='pf-rank'><div class='pf-ico'>${ico('badge')}</div><div><div class='pf-name'>${esc(r.name)}</div><div class='note'>${DET.xp} แต้ม · ${nx?'อีก '+(nx.min-DET.xp)+' แต้มถึงยศ '+esc(nx.name):'ยศสูงสุดแล้ว'}</div></div></div>
@@ -1507,8 +1488,9 @@ const ACA={cur:null,picked:new Set(),verdict:null,done:false,res:null};
 const starsStr=n=>'★'.repeat(n)+'☆'.repeat(3-n);
 function renderAcademy(){
   const box=$('#acBody');if(!box)return;
+  if(INT.cur){renderInterrogation();return}
   if(!ACA.cur){
-    box.innerHTML=`<div class='cases'>${CASES.map(c=>{const q=DET.quiz[c.id];return `<button class='cscard' type='button' data-id='${c.id}'><span class='pill' style='--c:${q?'var(--green)':'var(--orange)'}'><span class='dot'></span>${q?'ปิดคดีแล้ว':'คดีใหม่'}</span><b>${esc(c.title)}</b><span class='note'>${esc(c.ctx)}</span>${q?`<span class='stars'>${starsStr(q.stars)} <span class='note'>คะแนนสูงสุด ${q.score}</span></span>`:''}</button>`}).join('')}</div>`;
+    box.innerHTML=roomsHTML()+`<h2 style='margin:28px 0 12px'>คดีฝึกสืบ: แตะจุดที่น่าสงสัย</h2><div class='cases'>${CASES.map(c=>{const q=DET.quiz[c.id];return `<button class='cscard' type='button' data-id='${c.id}'><span class='pill' style='--c:${q?'var(--green)':'var(--orange)'}'><span class='dot'></span>${q?'ปิดคดีแล้ว':'คดีใหม่'}</span><b>${esc(c.title)}</b><span class='note'>${esc(c.ctx)}</span>${q?`<span class='stars'>${starsStr(q.stars)} <span class='note'>คะแนนสูงสุด ${q.score}</span></span>`:''}</button>`}).join('')}</div>`;
     return;
   }
   const c=CASES.find(x=>x.id===ACA.cur),done=ACA.done;
@@ -1587,7 +1569,7 @@ $('#acBody').addEventListener('click',e=>{
     $$('#acVerdict [data-verdict]').forEach(b=>b.setAttribute('aria-pressed',String(b===vd)));
     $('#acSubmit').disabled=false;return;
   }
-  if(e.target.closest('#acSubmit')){if(ACA.verdict)submitCase();return}
+  if(e.target.closest('#acSubmit')){if(ACA.verdict){submitCase();missionTick('m_train')}return}
   if(e.target.closest('#acBack')){ACA.cur=null;renderAcademy();return}
   if(e.target.closest('#acNext')){
     const i=CASES.findIndex(x=>x.id===ACA.cur),n=CASES[i+1];
@@ -1597,10 +1579,348 @@ $('#acBody').addEventListener('click',e=>{
 });
 
 
+/* =====================================================
+   3) ชั้นความเข้มข้น: ผลตรวจแบบสืบสวนต่อเนื่อง ซักค้านผู้ขาย กระดานโยงเบาะแส ภารกิจ ห้องสอบสวน และเอฟเฟกต์ลึกลับ
+   ===================================================== */
+
+/* ---------- ภารกิจประจำวัน ---------- */
+const MISSIONS=[
+  {id:'m_open',t:'เปิดคดีตรวจผู้ขาย 1 คดี',n:1},
+  {id:'m_close',t:'ปิดงานสืบที่ค้างอยู่ 2 ข้อ',n:2},
+  {id:'m_ask',t:'คัดลอกคำถามซักค้านไปใช้ 1 ครั้ง',n:1},
+  {id:'m_train',t:'ปิดคดีฝึกสืบหรือห้องสอบสวน 1 คดี',n:1},
+  {id:'m_check',t:'ติ๊กเช็กลิสต์ก่อนโอนอย่างน้อย 5 ข้อ',n:5}
+];
+const dayNum=()=>{const d=new Date();return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000)};
+const todaysMissions=()=>{const d=dayNum();return [0,1,2].map(i=>MISSIONS[(d+i)%MISSIONS.length])};
+function misState(){
+  const dk=String(dayNum());
+  if(!DET.mis||DET.mis.day!==dk)DET.mis={day:dk,prog:{},done:{}};
+  return DET.mis;
+}
+function missionSet(id,n){
+  const m=MISSIONS.find(x=>x.id===id);
+  if(!m||!todaysMissions().some(x=>x.id===id))return;
+  const ms=misState();
+  ms.prog[id]=Math.max(ms.prog[id]||0,n);
+  if(ms.prog[id]>=m.n&&!ms.done[id]){ms.done[id]=true;detSave();awardXP('mission',15,'ภารกิจสำเร็จ: '+m.t)}
+  else detSave();
+  renderMissions();
+}
+const missionTick=id=>{const ms=misState();missionSet(id,(ms.prog[id]||0)+1)};
+function renderMissions(){
+  const el=$('#missions');if(!el)return;
+  const ms=misState();
+  el.innerHTML=`<div class='mhead'><b>ภารกิจวันนี้</b><span class='note'>สำเร็จแล้วได้ +15 แต้มต่อภารกิจ เปลี่ยนทุกวัน</span></div><div class='mlist'>`+todaysMissions().map(m=>{
+    const p=Math.min(m.n,ms.prog[m.id]||0),done=!!ms.done[m.id];
+    return `<div class='mis${done?' done':''}'><span class='mt'>${done?ico('check'):''}${esc(m.t)}</span><span class='mp'><i style='width:${p/m.n*100}%'></i></span><span class='mn'>${p}/${m.n}</span></div>`;
+  }).join('')+`</div>`;
+}
+
+/* ---------- ถอดรหัสตัวอักษร (เอฟเฟกต์ตอนเปิดผลตรวจ) ---------- */
+function decrypt(el,final,ms){
+  if(!el)return;
+  if(reduced){el.textContent=final;return}
+  const chars='กขคงจชซดตทนบปมยรลวสหอฮ฿◈?!#%&01';
+  const t0=performance.now();
+  const step=()=>{
+    const p=Math.min(1,(performance.now()-t0)/(ms||700)),keep=Math.floor(final.length*p);
+    let s=final.slice(0,keep);
+    for(let i=keep;i<final.length;i++)s+=final[i]===' '?' ':chars[Math.floor(Math.random()*chars.length)];
+    el.textContent=p<1?s:final;
+    if(p<1)requestAnimationFrame(step);
+  };
+  step();
+}
+
+/* ---------- คำถามซักค้านผู้ขาย ---------- */
+const ASK={
+  age:{t:'ประวัติเพจ',msg:'ขอทราบหน่อยค่ะ เพจ/ร้านนี้เปิดมานานแค่ไหนแล้ว และมีลิงก์ร้านเก่าหรือร้านอื่นที่ขายอยู่ไหมคะ',ok:'บอกวันที่ชัดเจน ตรงกับประวัติโพสต์ที่เห็น',bad:'เลี่ยงตอบ เปลี่ยนเรื่อง หรือข้อมูลไม่ตรงกับที่เห็นในเพจ'},
+  rev:{t:'รีวิวและลูกค้าจริง',msg:'ขอดูตัวอย่างลูกค้าที่ซื้อล่าสุดได้ไหมคะ ขอรูปสินค้าที่ลูกค้าได้รับจริงด้วย',ok:'ส่งรีวิวที่ตรวจย้อนไปถึงบัญชีลูกค้าได้',bad:'ส่งภาพแคปที่ไม่มีที่มา หรือชื่อผู้รีวิวซ้ำๆ'},
+  pay:{t:'ชื่อบัญชีรับโอน',msg:'ขอเลขบัญชีและชื่อบัญชีรับโอนค่ะ จะได้ตรวจชื่อกับชื่อร้านก่อนโอน',ok:'ชื่อบัญชีตรงกับชื่อร้านหรือเจ้าของร้าน',bad:'บอกว่าเป็นบัญชีญาติ/คนอื่น หรือเปลี่ยนบัญชีกะทันหัน'},
+  when:{t:'ช่องทางจ่ายเงิน',msg:'ขอจ่ายแบบเก็บเงินปลายทาง หรือผ่านระบบพักเงินของแพลตฟอร์มได้ไหมคะ',ok:'ยอมโดยไม่มีเงื่อนไขแปลกๆ',bad:'ปฏิเสธ อ้างว่าไม่มีหรือเสียเวลา หรือเร่งให้โอนก่อน'},
+  offp:{t:'การจ่ายนอกแพลตฟอร์ม',msg:'ขอซื้อผ่านระบบของแอปนะคะ เพื่อให้ทั้งสองฝ่ายมีหลักฐานค่ะ',ok:'ยินดี ไม่ชวนย้ายช่องทาง',bad:'ชวนโอนตรงหรือย้ายไปคุยในไลน์ส่วนตัว'},
+  ask:{t:'ข้อมูลส่วนตัวที่ถูกขอ',msg:'ขอใช้ข้อมูลเท่าที่จำเป็นต่อการจัดส่ง (ชื่อ ที่อยู่ เบอร์) นะคะ ไม่สะดวกส่งรูปบัตรประชาชนหรือรหัสใดๆ ค่ะ',ok:'เข้าใจและไม่ขอเพิ่ม',bad:'ยืนยันว่าต้องใช้บัตรประชาชน/OTP จึงจะขายให้'},
+  press:{t:'การเร่งรัด',msg:'ขอเวลาตรวจสอบก่อน 1 วัน ถ้าสินค้ายังอยู่ค่อยสั่งได้ไหมคะ',ok:'ยินดีรอ ไม่กดดัน',bad:'บอกว่าคนอื่นกำลังจะจอง ต้องรีบโอนตอนนี้'},
+  ident:{t:'ตัวตนของร้าน',msg:'ขอชื่อร้านตามทะเบียนและที่อยู่ร้านที่ตรวจสอบได้ค่ะ',ok:'ให้ข้อมูลที่ค้นเจอและตรงกัน',bad:'ไม่ให้ หรือให้ข้อมูลที่ค้นไม่เจอ'},
+  img:{t:'รูปสินค้าจริง',msg:'ขอรูปสินค้าที่ถ่ายตอนนี้ โดยมีกระดาษเขียนชื่อดิฉันและวันที่วันนี้วางคู่กับสินค้าได้ไหมคะ',ok:'ส่งได้ทันทีและตรงกับสินค้าที่ลงขาย',bad:'ส่งรูปเดิมจากประกาศ หรืออ้างว่าถ่ายไม่ได้'},
+  contact:{t:'การแสดงสินค้า',msg:'ขอวิดีโอคอลดูสินค้าสั้นๆ ก่อนตัดสินใจได้ไหมคะ',ok:'ยินดีและตอบตรงประเด็น',bad:'บ่ายเบี่ยง อ้างติดธุระหรือกล้องเสีย'},
+  ret:{t:'เงื่อนไขคืน/เคลม',msg:'ขอทราบเงื่อนไขการคืนหรือเคลมถ้าของไม่ตรงปกค่ะ',ok:'ตอบชัดเจนและตรงกับที่ประกาศไว้',bad:'ไม่รับคืนทุกกรณี หรือไม่ยอมตอบ'}
+};
+function askSectionHTML(r){
+  const ids=[];
+  r.pending.forEach(p=>{if(p.id&&!ids.includes(p.id))ids.push(p.id)});
+  r.findings.filter(f=>f.qid&&(f.sev==='bad'||f.sev==='warn')).forEach(f=>{if(!ids.includes(f.qid))ids.push(f.qid)});
+  r.askList=ids.slice(0,6).map(id=>ASK[id]).filter(Boolean);
+  if(!r.askList.length)return '';
+  return `<div><h3>ซักค้านผู้ขาย (${r.askList.length} คำถาม)</h3><p class='note'>ข้อความพร้อมส่ง ใช้ถามผู้ขายตรงๆ แล้วเทียบคำตอบกับ “ปกติ” และ “น่าห่วง”</p><ul class='ask'>`+r.askList.map((a,i)=>`<li><b>${esc(a.t)}</b><blockquote>${esc(a.msg)}</blockquote><div class='row'><span class='okt'><b>ปกติ:</b> ${esc(a.ok)}</span><span class='badt'><b>น่าห่วง:</b> ${esc(a.bad)}</span></div><button class='btn sm' type='button' data-copy='${i}'>คัดลอกข้อความ</button></li>`).join('')+`</ul></div>`;
+}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}
+}
+
+/* ---------- กระดานโยงเบาะแส (เส้นด้ายแดง) ---------- */
+function boardSVG(r){
+  const f=r.form;
+  const ents=[{k:'plat',label:f.plat||'แพลตฟอร์ม',sev:'info'}].concat((r.nodes||[]).slice(0,6));
+  const cases=(r.hits||[]).slice(0,3).map(h=>({k:'case',label:h.title,sev:'bad',rep:h}));
+  const ring=ents.concat(cases);
+  if(ring.length<2)return '';
+  const W=640,H=370,cx=W/2,cy=H/2;
+  const pos=ring.map((n,i)=>{const a=-Math.PI/2+i*2*Math.PI/ring.length;return {x:cx+Math.cos(a)*232,y:cy+Math.sin(a)*136}});
+  const col={bad:'#ff5470',warn:'#ffc857',ok:'#3df5a8',info:'#58c7f3'};
+  const tag={plat:'แพลตฟอร์ม',link:'ลิงก์',phone:'เบอร์โทร',acct:'เลขบัญชี',name:'ชื่อเพจ/ร้าน',id:'ตัวระบุ',case:'เคสชุมชน'};
+  const cut=(s,n)=>{s=String(s);return s.length>n?s.slice(0,n-1)+'…':s};
+  const centerSev=r.level==='red'?'bad':r.level==='yellow'?'warn':'ok';
+  let strings='',nodes='',i=0;
+  ring.forEach((n,idx)=>{
+    let from={x:cx,y:cy};
+    if(n.k==='case'){
+      const ref=ents.findIndex(e=>e.hits&&e.hits.some(h=>h.id===n.rep.id));
+      if(ref>=0)from=pos[ref];
+    }
+    const to=pos[idx],mx=(from.x+to.x)/2,my=(from.y+to.y)/2+16;
+    const len=Math.round(Math.hypot(to.x-from.x,to.y-from.y)*1.15)+20;
+    const c=col[n.sev];
+    strings+=`<path class='str' style='--len:${len};--i:${i++};color:${c}' stroke='${c}' d='M${from.x} ${from.y} Q${mx} ${my} ${to.x} ${to.y}'/>`;
+  });
+  ring.forEach((n,idx)=>{
+    const p=pos[idx],c=col[n.sev],w=148,h=40;
+    nodes+=`<g class='nd'><rect x='${p.x-w/2}' y='${p.y-h/2}' width='${w}' height='${h}' rx='8' stroke='${c}'/><text class='tg' x='${p.x-w/2+10}' y='${p.y-h/2+14}'>${esc(tag[n.k]||'')}</text><text x='${p.x-w/2+10}' y='${p.y+h/2-9}'>${esc(cut(n.label,19))}</text><circle class='${n.sev==='bad'?'pulse':''}' cx='${p.x+w/2-8}' cy='${p.y-h/2+8}' r='4.5' fill='${c}'/></g>`;
+  });
+  const cn=cut(f.name||f.item||'ผู้ขาย',18);
+  nodes+=`<g class='nd'><rect x='${cx-88}' y='${cy-26}' width='176' height='52' rx='10' stroke='${col[centerSev]}' stroke-width='2.2'/><text class='tg' x='${cx-76}' y='${cy-8}'>ผู้ขายที่ถูกสืบ</text><text x='${cx-76}' y='${cy+14}' style='font-size:14px;font-weight:600'>${esc(cn)}</text><circle class='${centerSev==='bad'?'pulse':''}' cx='${cx+80}' cy='${cy-18}' r='5' fill='${col[centerSev]}'/></g>`;
+  return `<svg viewBox='0 0 ${W} ${H}' role='img' aria-label='กระดานโยงเบาะแสของผู้ขายกับตัวระบุและเคสในชุมชน'>${strings}${nodes}</svg>`;
+}
+
+/* ---------- ผลตรวจ ---------- */
+function renderResult(r,opts){
+  opts=opts||{};
+  const anim=!!opts.animate&&!reduced;
+  lastResult=r;
+  const L=LV[r.level];
+  const segs=Array.from({length:20},(_,i)=>`<i class="${i<Math.round(r.score/5)?'on':''}" style="--i:${i}"></i>`).join('');
+  const fl=r.findings.map((x,i)=>`<li data-sev="${x.sev}" style="--n:${i}">${ico(SEVICON[x.sev])}<span><b>${esc(x.title)}</b><span class="d">${esc(x.detail)}</span></span><span class="w">${x.w>0?'+'+x.w:x.w<0?String(x.w):''}</span></li>`).join('');
+  const ents=r.ents.length?`<div><h3>ตัวระบุที่ตรวจพบ</h3><div class="ent">${r.ents.map(e=>`<span class="mono">${esc(e)}</span>`).join('')}</div></div>`:'';
+  const scene=r.input?`<div><h3>ภาพเกิดเหตุ (แชต/ประกาศ)</h3>${sceneHTML(r)}</div>`:'';
+  const qMap=Object.fromEntries(QUESTIONS.map(q=>[q.id,q]));
+  const pend=r.pending.length?`<div><h3>งานสืบที่ยังค้าง (${r.pending.length})</h3><p class='note'>ตรวจจริงแล้วเลือกผลที่พบ คำตัดสินจะอัปเดตทันที ปิดงานได้แต้มและนับเป็นภารกิจ</p><ol class='todo'>${r.pending.map(p=>{
+      const q=qMap[p.id];
+      const chips=q?q.opts.filter(o=>o.v!=='?').map(o=>`<button type='button' class='chip pchip' data-q='${q.id}' data-v='${o.v}'>${esc(o.l)}</button>`).join(''):'';
+      return `<li><b>${esc(p.t)}</b><br><span class='note'>${esc(p.how)}</span>${chips?`<div class='qopts mini'><span class='note'>ตรวจแล้วพบว่า:</span>${chips}</div>`:''}</li>`;
+    }).join('')}</ol></div>`:'';
+  const cork=boardSVG(r);
+  const corkH=cork?`<div><h3>กระดานโยงเบาะแส</h3><div class='cork${anim?'':' static'}'>${cork}</div><p class='note' style='margin-top:6px'>เส้นแดง = ตัวระบุที่ตรงกับเคสชุมชนหรือลิงก์เสี่ยงสูง เหลือง = ควรระวัง เขียว = ยังไม่พบสัญญาณ</p></div>`:'';
+  const name=r.form.name||r.form.item||'ผู้ขายที่ไม่ระบุชื่อ';
+  const dossier=`<div class='dossier'><span>ความครบถ้วนของแฟ้ม</span><span class='dbar'><i style='width:${r.complete}%'></i></span><b>${r.complete}%</b></div>${r.complete<70?`<p class='note'>ข้อมูลยังไม่ครบ คำตัดสินอาจเปลี่ยนเมื่อปิดงานสืบที่ค้าง</p>`:''}`;
+  $('#result').innerHTML=
+   `<div class="verdict${anim?' anim':''}" data-level="${r.level}">
+     <div class="vh"><span class="stamp">${L.stamp}</span><div class="caseid">แฟ้มคดี ${esc(r.caseId||'-')} · ${esc(name)}</div><h2 id="vlabel">${L.label}</h2><p>${L.sub}</p>
+     <div class="meter" role="img" aria-label="คะแนนความเสี่ยง ${r.score} จาก 100">${segs}</div><div class="note">คะแนนความเสี่ยง ${r.score} / 100 · โหมด${MODES[mode].label} (เหลืองตั้งแต่ ${MODES[mode].y} แดงตั้งแต่ ${MODES[mode].r})</div>${dossier}</div>
+     <div class="vb">${priceBarHTML(r)}${corkH}
+       <div><h3>สัญญาณที่พบ</h3><ul class="finds">${fl}</ul></div>${scene}${ents}${pend}${askSectionHTML(r)}
+       <div><h3>จ่ายเงินอย่างไรให้ปลอดภัยขึ้น</h3><ol class="todo">${L.pay.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>
+       <div class="row"><button class="btn pri" id="toLocker" type="button">เก็บหลักฐานเข้าตู้</button><button class="btn" id="toBoard" type="button">รายงานผู้ขายนี้</button><button class="btn" id="toGuide" type="button">เช็กก่อนโอน</button><span id="aiSlot"></span></div>
+       <div id="aiOut"></div>${caseBoxHTML(r)}
+       <p class="note">ผลนี้เป็นการประเมินสัญญาณเสี่ยงจากข้อมูลที่คุณให้ ไม่ใช่การตัดสินว่าใครโกง และไม่ใช่การรับรองร้านค้า</p>
+     </div></div>`;
+  $('#toBoard').addEventListener('click',()=>openReportFromResult());
+  $('#toLocker').addEventListener('click',()=>{location.hash='#locker'});
+  $('#toGuide').addEventListener('click',()=>{location.hash='#guide'});
+  bindCaseBox(r);
+  setupAI();
+  if(anim)decrypt($('#vlabel'),L.label,750);
+}
+$('#result').addEventListener('click',async e=>{
+  const pc=e.target.closest('.pchip');
+  if(pc){closeTask(pc.dataset.q,pc.dataset.v);return}
+  const cp=e.target.closest('[data-copy]');
+  if(cp&&lastResult&&lastResult.askList){
+    const a=lastResult.askList[+cp.dataset.copy];if(!a)return;
+    const ok=await copyText(a.msg);
+    toast(ok?'คัดลอกข้อความแล้ว นำไปวางในแชตกับผู้ขายได้เลย':'คัดลอกอัตโนมัติไม่ได้ ให้กดค้างที่ข้อความแล้วเลือกคัดลอก');
+    if(ok)missionTick('m_ask');
+  }
+});
+function closeTask(qid,val){
+  const row=$(`#qList .qrow[data-q="${qid}"]`);if(!row)return;
+  $$('.chip',row).forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.v===val)));
+  const f=readForm(),res=investigate(f),rec=upsertCase(f,res);
+  res.caseId=rec.id;res.caseRec=rec;
+  const before=lastResult?lastResult.level:null,y=window.scrollY;
+  renderResult(res,{animate:false});
+  renderHistory();
+  window.scrollTo(0,y);
+  awardXP('close',3,'ปิดงานสืบ');
+  missionTick('m_close');
+  if(before&&before!==res.level)toast('คำตัดสินเปลี่ยนเป็น “'+LV[res.level].label+'”');
+}
+
+async function runScan(){
+  const f=readForm();
+  if(!formHasInput(f)){toast('กรอกข้อมูลผู้ขายอย่างน้อย 1 อย่าง เช่น ชื่อร้าน ลิงก์ เลขบัญชี หรือข้อความแชต');return}
+  const res=investigate(f);
+  $('#scanBtn').disabled=true;
+  const names=['อ่านข้อมูลผู้ขายและแบบสอบสวน','ตรวจลิงก์และถ้อยคำในแชต','หาความขัดแย้งในคำให้การ','เทียบกับเคสบนกระดานผู้ขาย'];
+  $('#result').innerHTML=`<div class="card radarcard"><div class="radar" aria-hidden="true"><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><i class="sweep"></i><b class="blip b1"></b><b class="blip b2"></b><b class="blip b3"></b></div><div><h3 id="scanTitle">กำลังสืบหาร่องรอย</h3><ul class="steps" style="margin-top:12px">${names.map((n,i)=>`<li id="st${i}"><span class="tick"></span>${n}</li>`).join('')}</ul><div class="scanbar"><i></i></div></div></div>`;
+  decrypt($('#scanTitle'),'กำลังสืบหาร่องรอย',650);
+  for(let i=0;i<names.length;i++){
+    await sleep(reduced?0:330);
+    const li=$('#st'+i);if(li){li.classList.add('done');li.querySelector('.tick').innerHTML=ico('check')}
+  }
+  await sleep(reduced?0:200);
+  const rec=upsertCase(f,res);
+  res.caseId=rec.id;res.caseRec=rec;
+  renderResult(res,{animate:true});
+  if(rec.isNew)onNewCase(res);
+  renderHistory();
+  $('#scanBtn').disabled=false;
+  const vd=$('.verdict');if(vd&&window.innerWidth<900)vd.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});
+}
+
+/* ---------- ห้องสอบสวน: ถามได้จำกัด 4 ข้อ เลือกให้ดี ---------- */
+const INTERROGATIONS=[
+ {id:'i1',title:'ห้องสอบสวน: ร้านไอแพดมือสอง',truth:'scam',ctx:'ผู้ขายบนเพจหนึ่งเสนอขายไอแพดมือสองราคาต่ำกว่าตลาดมาก คุณซักถามได้เพียง 4 ข้อก่อนที่ผู้ขายจะหยุดตอบ',qs:[
+  {q:'ขอชื่อบัญชีรับโอนได้ไหมคะ',a:'“บัญชีหลานค่ะ ชื่อ นายอนุชา ส่วนร้านใช้ชื่ออื่นนะคะ โอนเข้าบัญชีนี้ได้เลย”',t:'key',n:'ชื่อบัญชีรับโอนไม่ตรงกับร้าน เป็นรูปแบบบัญชีม้า'},
+  {q:'ขอจ่ายแบบเก็บเงินปลายทางได้ไหมคะ',a:'“ไม่ได้ค่ะ ต้องโอนเต็มจำนวนก่อนเท่านั้น ของเหลือชิ้นเดียว รีบโอนนะคะ”',t:'key',n:'ปฏิเสธเก็บเงินปลายทางพร้อมเร่งรัด ผู้ซื้อไม่มีทางกันตัวเอง'},
+  {q:'ขอวิดีโอสินค้าที่มีกระดาษเขียนชื่อดิฉันได้ไหมคะ',a:'“ตอนนี้กล้องเสียค่ะ ส่งรูปเดิมจากประกาศให้ก่อนนะคะ”',t:'key',n:'บ่ายเบี่ยงเมื่อขอหลักฐานว่ามีของจริง และใช้รูปเดิมจากประกาศ'},
+  {q:'ต้องส่งข้อมูลอะไรเพื่อสั่งซื้อบ้างคะ',a:'“ส่งรูปบัตรประชาชนมายืนยันตัวตนผู้ซื้อด้วยนะคะ”',t:'key',n:'ผู้ขายไม่จำเป็นต้องใช้บัตรของผู้ซื้อ ข้อมูลนี้ใช้สวมรอยได้'},
+  {q:'เพจนี้เปิดมานานแค่ไหนคะ',a:'“3 สัปดาห์ค่ะ เพจเก่าโดนรายงานเลยเปิดใหม่”',t:'minor',n:'เพจใหม่และยอมรับว่าเพจเก่าถูกรายงาน เป็นสัญญาณรอง'},
+  {q:'มีรับประกันไหมคะ',a:'“ไม่มีค่ะ ไม่รับคืนด้วยนะคะ”',t:'minor',n:'ไม่รับคืนไม่รับเคลมทุกกรณี เป็นสัญญาณรอง'},
+  {q:'ส่งด้วยบริษัทขนส่งอะไรคะ',a:'“Flash ค่ะ”',t:'none',n:'คำตอบทั่วไป ไม่ช่วยตัดสิน'},
+  {q:'มีสีอะไรบ้างคะ',a:'“สีเทากับสีดำค่ะ”',t:'none',n:'ถามรายละเอียดสินค้า ไม่ช่วยตรวจตัวผู้ขาย'}
+ ]},
+ {id:'i2',title:'ห้องสอบสวน: ร้านเครื่องปั้นดินเผา',truth:'legit',ctx:'เพจร้านเครื่องปั้นดินเผาขายถ้วยชามราคาสมเหตุสมผล คุณซักถามได้เพียง 4 ข้อ ระวังอย่าหวาดระแวงเกินเหตุ',qs:[
+  {q:'ขอชื่อบัญชีรับโอนได้ไหมคะ',a:'“เป็นบัญชีกลุ่มวิสาหกิจชุมชน ชื่อตรงกับชื่อร้านในเพจค่ะ ส่งให้ทางข้อความแล้วนะคะ”',t:'key',n:'ชื่อบัญชีตรงกับร้าน เป็นสัญญาณที่ดี'},
+  {q:'ขอเก็บเงินปลายทางได้ไหมคะ',a:'“ได้ค่ะ มีค่าธรรมเนียมเก็บเงินปลายทาง 30 บาทตามขนส่ง”',t:'key',n:'ยอมให้จ่ายเมื่อรับของ แม้มีค่าธรรมเนียมตามปกติ'},
+  {q:'ขอวิดีโอสินค้าจริงที่ถืออยู่ตอนนี้ได้ไหมคะ',a:'“ได้ค่ะ ส่งวิดีโอในแชตแล้ว มีวันที่และกระดาษชื่อคุณวางคู่กับสินค้าด้วยค่ะ”',t:'key',n:'ยอมส่งหลักฐานว่ามีของจริงทันที'},
+  {q:'ถ้าของแตกระหว่างขนส่ง เคลมอย่างไรคะ',a:'“เคลมได้ภายใน 3 วัน ถ่ายวิดีโอตอนเปิดกล่องเป็นหลักฐานนะคะ ระบุไว้ในเพจแล้วค่ะ”',t:'key',n:'เงื่อนไขชัดเจนและตรงกับที่ประกาศ'},
+  {q:'ต้องส่งรูปบัตรประชาชนหรือรหัสอะไรไหมคะ',a:'“ไม่ต้องค่ะ ขอแค่ชื่อ ที่อยู่ เบอร์โทรเพื่อจัดส่ง”',t:'minor',n:'ขอข้อมูลเท่าที่จำเป็นต่อการจัดส่ง'},
+  {q:'สินค้ามีพร้อมส่งกี่ชิ้นคะ',a:'“พร้อมส่งทั้งหมดค่ะ ค่อยๆ ตัดสินใจได้ ไม่ต้องรีบ”',t:'minor',n:'ไม่เร่งรัด'},
+  {q:'ลดราคาได้ไหมคะ',a:'“ลดให้ 5% ถ้าซื้อตั้งแต่ 3 ชิ้นค่ะ”',t:'none',n:'ต่อรองราคาตามปกติ ไม่ช่วยตัดสิน'},
+  {q:'ใช้เวลาส่งกี่วันคะ',a:'“1–2 วันทำการค่ะ”',t:'none',n:'คำตอบทั่วไป ไม่ช่วยตัดสิน'}
+ ]}
+];
+const INT={cur:null,asked:[],verdict:null,done:false,res:null};
+const INT_BUDGET=4;
+function roomsHTML(){
+  return `<h2 style='margin:0 0 6px'>ห้องสอบสวน</h2><p class='note' style='margin-bottom:12px'>คุณซักผู้ขายได้แค่ ${INT_BUDGET} ข้อ เลือกคำถามที่ได้เบาะแสมากที่สุด แล้วตัดสินใจ</p><div class='rooms'>`+INTERROGATIONS.map(r=>{
+    const d=(DET.inter||{})[r.id];
+    return `<button class='rmcard' type='button' data-room='${r.id}'><span class='pill' style='--c:${d?'var(--green)':'#d946ef'}'><span class='dot'></span>${d?'ผ่านแล้ว':'ห้องใหม่'}</span><b>${esc(r.title)}</b><span class='note'>${esc(r.ctx)}</span>${d?`<span class='stars'>${starsStr(d.stars)} <span class='note'>คะแนนสูงสุด ${d.score}</span></span>`:''}</button>`;
+  }).join('')+`</div>`;
+}
+function renderInterrogation(){
+  const box=$('#acBody'),R=INTERROGATIONS.find(x=>x.id===INT.cur);if(!R)return;
+  const left=INT_BUDGET-INT.asked.length;
+  const budget=Array.from({length:INT_BUDGET},(_,i)=>`<i class='${i<left?'':'used'}'></i>`).join('');
+  const chat=INT.asked.map(i=>`<div class='bub me'>${esc(R.qs[i].q)}</div><div class='bub sel'>${esc(R.qs[i].a)}</div>`).join('')||`<p class='note'>ยังไม่ได้ถามอะไร เลือกคำถามด้านล่าง</p>`;
+  let body=`<button class='btn sm' id='intBack' type='button'>กลับไปรายการ</button><div class='card stack' style='margin-top:14px'>
+   <div><span class='pill' style='--c:#d946ef'><span class='dot'></span>ห้องสอบสวน</span><h2 style='margin-top:8px'>${esc(R.title)}</h2><p class='mute'>${esc(R.ctx)}</p></div>
+   <div class='budget' aria-label='คำถามที่เหลือ ${left} จาก ${INT_BUDGET}'>${budget}<span class='note'>เหลือ ${left} คำถาม</span></div>
+   <div class='chat' aria-live='polite'>${chat}</div>`;
+  if(!INT.done){
+    if(left>0)body+=`<div class='stack'>${R.qs.map((x,i)=>`<button class='askq' type='button' data-ask='${i}' ${INT.asked.includes(i)?'disabled':''}>${esc(x.q)}</button>`).join('')}</div>`;
+    if(INT.asked.length>=1)body+=`<div class='row' id='intVerdict' role='group' aria-label='คำตัดสิน'><span>คำตัดสินของคุณ</span><button class='chip' type='button' data-iverdict='scam' aria-pressed='${INT.verdict==='scam'}'>เสี่ยง ไม่ควรโอน</button><button class='chip' type='button' data-iverdict='legit' aria-pressed='${INT.verdict==='legit'}'>ดูเป็นร้านจริง</button></div><div class='row'><button class='btn pri' id='intSubmit' type='button' ${INT.verdict?'':'disabled'}>ปิดคดี</button></div>`;
+  }else{
+    const S=INT.res,lvl=S.score>=60?'green':S.score>=40?'yellow':'red';
+    body+=`<div class='verdict anim' data-level='${lvl}'><div class='vh'><span class='stamp'>ปิดคดี</span><h2>${starsStr(S.stars)} ${S.score} คะแนน</h2><p>${S.right?'ตัดสินถูกต้อง':'ตัดสินคลาดเคลื่อน'}: ร้านนี้${R.truth==='scam'?'มีสัญญาณเสี่ยงสูง':'ดูเป็นร้านจริง'} · ถามคำถามชี้ขาด ${S.keyAsked}/${S.keyTotal}</p><p class='note' style='margin-top:6px'>${esc(S.xpMsg)}</p></div>
+     <div class='vb'><h3>เฉลยทุกคำถาม</h3><ul class='exp'>${R.qs.map((x,i)=>{
+       const asked=INT.asked.includes(i),lab=x.t==='key'?'ชี้ขาด':x.t==='minor'?'เบาะแสรอง':'ไม่ช่วยตัดสิน',cls=x.t==='key'?'ok':'nt';
+       return `<li><span class='tag ${cls}'>${lab}${asked?' · ถามแล้ว':''}</span><span><b>${esc(x.q)}</b><br>${esc(x.a)}<br><span class='note'>${esc(x.n)}</span></span></li>`;
+     }).join('')}</ul><div class='row'><button class='btn pri' id='intNext' type='button'>ห้องถัดไป</button><button class='btn' id='intRetry' type='button'>ลองสืบใหม่</button></div></div></div>`;
+  }
+  body+='</div>';
+  box.innerHTML=body;
+}
+function submitInterrogation(){
+  const R=INTERROGATIONS.find(x=>x.id===INT.cur);
+  const keyTotal=R.qs.filter(q=>q.t==='key').length;
+  let keyAsked=0,minorAsked=0;
+  INT.asked.forEach(i=>{if(R.qs[i].t==='key')keyAsked++;else if(R.qs[i].t==='minor')minorAsked++});
+  const right=INT.verdict===R.truth;
+  const score=Math.min(100,(right?50:0)+keyAsked*12+minorAsked*3+(keyAsked===keyTotal?2:0));
+  const stars=score>=95?3:score>=60?2:1;
+  DET.inter=DET.inter||{};
+  const prev=DET.inter[R.id];
+  let xpMsg;
+  INT.res={score,stars,right,keyAsked,keyTotal,xpMsg:''};
+  if(!prev){
+    DET.inter[R.id]={score,stars,ts:Date.now()};
+    const xp=8+Math.round(score*0.2);
+    xpMsg='ปิดห้องสอบสวนครั้งแรก ได้ '+xp+' แต้ม';
+    INT.res.xpMsg=xpMsg;INT.done=true;renderInterrogation();
+    awardXP('inter',xp,'ปิดห้องสอบสวน');
+  }else{
+    if(score>prev.score)DET.inter[R.id]={score,stars,ts:Date.now()};
+    xpMsg=score>prev.score?'คะแนนดีขึ้นกว่าเดิม (ฝึกซ้ำไม่ได้แต้มเพิ่ม)':'ฝึกซ้ำไม่ได้แต้มเพิ่ม';
+    checkBadges();detSave();renderRankChip();
+    INT.res.xpMsg=xpMsg;INT.done=true;renderInterrogation();
+  }
+  missionTick('m_train');
+}
+$('#acBody').addEventListener('click',e=>{
+  const rm=e.target.closest('.rmcard');
+  if(rm){Object.assign(INT,{cur:rm.dataset.room,asked:[],verdict:null,done:false,res:null});renderAcademy();window.scrollTo(0,0);return}
+  if(!INT.cur)return;
+  const q=e.target.closest('.askq');
+  if(q&&!INT.done){const i=+q.dataset.ask;if(INT.asked.length<INT_BUDGET&&!INT.asked.includes(i)){INT.asked.push(i);renderInterrogation()}return}
+  const v=e.target.closest('[data-iverdict]');
+  if(v&&!INT.done){INT.verdict=v.dataset.iverdict;renderInterrogation();return}
+  if(e.target.closest('#intSubmit')){if(INT.verdict)submitInterrogation();return}
+  if(e.target.closest('#intBack')){INT.cur=null;renderAcademy();return}
+  if(e.target.closest('#intRetry')){Object.assign(INT,{asked:[],verdict:null,done:false,res:null});renderInterrogation();return}
+  if(e.target.closest('#intNext')){
+    const i=INTERROGATIONS.findIndex(x=>x.id===INT.cur),n=INTERROGATIONS[i+1];
+    Object.assign(INT,{cur:n?n.id:null,asked:[],verdict:null,done:false,res:null});renderAcademy();window.scrollTo(0,0);
+  }
+});
+
+/* ---------- เอฟเฟกต์ลึกลับ: สปอตไลต์ตามเมาส์ และตัวอักษรลอย ---------- */
+function initMystic(){
+  const root=$('#mystic'),cv=$('#fx');
+  if(!root||!cv||!cv.getContext)return;
+  const ctx=cv.getContext('2d');if(!ctx)return;
+  let tx=.5,ty=.3,cx=.5,cy=.3,lastMove=0,W=0,H=0;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const GL=['?','!','฿','◈','✦','•','0','1','ก','ข','#'];
+  const PAL=['167,139,250','240,171,252','103,232,249','255,200,87','61,245,168'];
+  const spawn=init=>({x:Math.random()*W,y:init?Math.random()*H:H+30,s:(10+Math.random()*16)*dpr,v:(.15+Math.random()*.45)*dpr,g:GL[Math.floor(Math.random()*GL.length)],c:PAL[Math.floor(Math.random()*PAL.length)],a:.14+Math.random()*.32,ph:Math.random()*6.28,dx:(Math.random()-.5)*.25*dpr});
+  const resize=()=>{W=cv.width=Math.floor(innerWidth*dpr);H=cv.height=Math.floor(innerHeight*dpr);cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px'};
+  resize();
+  let ps=Array.from({length:innerWidth<760?20:46},()=>spawn(true));
+  window.addEventListener('resize',resize);
+  window.addEventListener('pointermove',e=>{tx=e.clientX/innerWidth;ty=e.clientY/innerHeight;lastMove=performance.now()},{passive:true});
+  const light=()=>document.documentElement.getAttribute('data-theme')==='light';
+  const draw=t=>{
+    ctx.clearRect(0,0,W,H);
+    ps.forEach(p=>{
+      if(!reduced){p.y-=p.v;p.x+=p.dx+Math.sin(t/1200+p.ph)*.2*dpr;if(p.y<-30)Object.assign(p,spawn(false))}
+      const tw=reduced?1:.6+.4*Math.sin(t/500+p.ph);
+      ctx.font=p.s+'px "IBM Plex Mono",monospace';
+      ctx.fillStyle='rgba('+p.c+','+(p.a*tw)+')';
+      ctx.shadowColor='rgba('+p.c+',.8)';ctx.shadowBlur=8*dpr;
+      ctx.fillText(p.g,p.x,p.y);
+    });
+  };
+  if(reduced){draw(0);return}
+  const frame=t=>{
+    requestAnimationFrame(frame);
+    if(document.hidden||light()||document.body.dataset.view!=='inspector')return;
+    if(t-lastMove>3500){tx=.5+.34*Math.sin(t/4300);ty=.3+.2*Math.cos(t/5700)}
+    cx+=(tx-cx)*.06;cy+=(ty-cy)*.06;
+    root.style.setProperty('--mx',(cx*100).toFixed(1)+'%');root.style.setProperty('--my',(cy*100).toFixed(1)+'%');
+    draw(t);
+  };
+  requestAnimationFrame(frame);
+}
+
 /* ---------- boot ---------- */
 $('#sPlat').innerHTML=PLATFORMS.map(p=>'<option>'+esc(p)+'</option>').join('');
 $('#rPlat').innerHTML='<option value="">ไม่ระบุ</option>'+PLATFORMS.map(p=>'<option>'+esc(p)+'</option>').join('');
 buildQuestions();
+initMystic();
+renderMissions();
 buildFilters();
 renderHistory();
 renderMode();
